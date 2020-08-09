@@ -1,0 +1,27 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "selfgoverningcatalyst:block/self_governing_catalyst"
+    },
+    "facing=east": {
+      "model": "selfgoverningcatalyst:block/self_governing_catalyst",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "selfgoverningcatalyst:block/self_governing_catalyst",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "selfgoverningcatalyst:block/self_governing_catalyst",
+      "y": 270
+    },
+    "facing=down": {
+      "model": "selfgoverningcatalyst:block/self_governing_catalyst",
+      "x": 90
+    },
+    "facing=up": {
+      "model": "selfgoverningcatalyst:block/self_governing_catalyst",
+      "x": 270
+    }
+  }
+}

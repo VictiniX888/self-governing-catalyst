@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "selfgoverningcatalyst",
+  "version": "${version}",
+
+  "name": "Self-Governing Catalyst",
+  "description": "Autonomous Activator for Fabric",
+  "authors": [
+    "VictiniX888"
+  ],
+  "contact": {
+    "homepage": "",
+    "sources": ""
+  },
+
+  "license": "",
+  "icon": "assets/modid/icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "io.github.victinix888.selfgoverningcatalyst.SelfGoverningCatalystKt::init"
+    ],
+    "client": [
+      "io.github.victinix888.selfgoverningcatalyst.SelfGoverningCatalystKt::initClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.8.7",
+    "fabric": "*",
+    "fabric-language-kotlin": "*",
+    "minecraft": "1.16.x"
+  },
+  "suggests": {
+    "flamingo": "*"
+  }
+}
