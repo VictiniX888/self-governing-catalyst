@@ -176,11 +176,13 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
     }
 
     private fun getItemToUse(): ItemStack {
-        return if (inventory[currentActiveSlot].isEmpty) {
-            inventory.firstOrNull { !it.isEmpty } ?: ItemStack.EMPTY
-        } else {
-            inventory[currentActiveSlot]
+        if (inventory[currentActiveSlot].isEmpty) {
+            (inventory.indexOfFirst { !it.isEmpty }).let {
+                currentActiveSlot = if (it >= 0) it else 0
+            }
         }
+
+        return inventory[currentActiveSlot]
     }
 
     private fun getEntityLookingAt(entity: LivingEntity): HitResult {
