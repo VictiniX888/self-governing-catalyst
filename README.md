@@ -9,7 +9,7 @@ Note that the aim direction will remain the same (straight) even if you change b
 <details>
     <summary>Images</summary>
     <p>
-        [Imgur](https://i.imgur.com/7HrTbmt.png)  
-        [Imgur](https://i.imgur.com/kJ7svE8.png)
+        <img src="https://i.imgur.com/7HrTbmt.png">  
+        <img src="https://i.imgur.com/kJ7svE8.png">
     </p>
 </details>
