@@ -127,8 +127,6 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
                 // obtain block that the fakeplayer is looking at
                 val lookingAtBlockState = world?.getBlockState(lookingAtHitResult.blockPos)
 
-                println("${lookingAtBlockState?.block}, ${lookingAtHitResult.side}, ${fakePlayer.getCameraPosVec(1.0F)}")
-
                 if (lookingAtBlockState?.isAir == false) {
                     if (!itemToUse.isEmpty) {
                         // try to use item on block it is looking at
