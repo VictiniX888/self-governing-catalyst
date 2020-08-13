@@ -53,14 +53,7 @@ class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlo
     }
 
     @Suppress("deprecation")
-    override fun onUse(
-        state: BlockState?,
-        world: World?,
-        pos: BlockPos?,
-        player: PlayerEntity?,
-        hand: Hand?,
-        hit: BlockHitResult?
-    ): ActionResult {
+    override fun onUse(state: BlockState?, world: World?, pos: BlockPos?, player: PlayerEntity?, hand: Hand?, hit: BlockHitResult?): ActionResult {
         if (world != null && player != null) {
             if (!world.isClient) {
                 if (world.getBlockEntity(pos) is SelfGoverningCatalystBlockEntity) {

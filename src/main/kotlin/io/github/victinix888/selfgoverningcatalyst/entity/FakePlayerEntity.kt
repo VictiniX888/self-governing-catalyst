@@ -3,7 +3,6 @@ package io.github.victinix888.selfgoverningcatalyst.entity
 import com.mojang.authlib.GameProfile
 import io.github.victinix888.selfgoverningcatalyst.network.FakeNetworkHandler
 import net.minecraft.block.BlockState
-import net.minecraft.item.ItemStack
 import net.minecraft.network.ClientConnection
 import net.minecraft.network.NetworkSide
 import net.minecraft.screen.NamedScreenHandlerFactory
@@ -18,7 +17,6 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
 import net.minecraft.util.math.Vec3d
 import net.minecraft.world.GameMode
-import net.minecraft.world.World
 import java.util.*
 
 class FakePlayerEntity(
@@ -130,7 +128,6 @@ class FakePlayerEntity(
 
     //override fun playerTick() {}
     //override fun tick() {}       don't override since attribute modifiers due to equipped tools/weapons is applied here
-    override fun eatFood(world: World?, stack: ItemStack?): ItemStack { return stack ?: ItemStack.EMPTY }
     override fun playSound(sound: SoundEvent?, volume: Float, pitch: Float) {}
     override fun playSound(event: SoundEvent?, category: SoundCategory?, volume: Float, pitch: Float) {}
     override fun openHandledScreen(factory: NamedScreenHandlerFactory?): OptionalInt { return OptionalInt.empty() }

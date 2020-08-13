@@ -183,6 +183,13 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
                 }
             }
         }
+
+        // ensure that any changes to the itemstack in main hand is reflected in the block's inventory
+        // (e.g. bucket left behind from drinking milk)
+        val mainHandItemStack = fakePlayer.getStackInHand(Hand.MAIN_HAND)
+        if (mainHandItemStack != inventory[currentActiveSlot]) {
+            inventory[currentActiveSlot] = mainHandItemStack
+        }
     }
 
     private fun getItemToUse(): ItemStack {
