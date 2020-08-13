@@ -2,6 +2,7 @@ package io.github.victinix888.selfgoverningcatalyst.blockentity
 
 import com.mojang.authlib.GameProfile
 import io.github.victinix888.selfgoverningcatalyst.SELF_GOVERNING_CATALYST_BLOCK_ENTITY
+import io.github.victinix888.selfgoverningcatalyst.block.SelfGoverningCatalystBlock
 import io.github.victinix888.selfgoverningcatalyst.block.SelfGoverningCatalystBlock.Companion.DEFAULT_DIRECTION
 import io.github.victinix888.selfgoverningcatalyst.entity.AimDirection
 import io.github.victinix888.selfgoverningcatalyst.entity.FakePlayerEntity
@@ -53,11 +54,13 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
                 fakePlayer.setAim(value)
             }
         }
+    var redstoneMode = DEFAULT_REDSTONE
 
     companion object {
         const val INVENTORY_SIZE = 9
         private val DEFAULT_MODE =  ClickMode.RIGHT_CLICK
         private val DEFAULT_AIM = AimDirection.STRAIGHT
+        private val DEFAULT_REDSTONE = RedstoneMode.IGNORE
     }
 
     override fun tick() {
@@ -80,7 +83,16 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
         } else {
             world?.isClient?.let { client ->
                 if (!client) {
-                    act()
+                    // determine whether the block is receiving a redstone signal
+                    val isTriggered by lazy { world?.getBlockState(pos)?.get(SelfGoverningCatalystBlock.TRIGGERED) ?: false }
+                    // determine whether the fakeplayer should act on current tick
+                    val shouldAct = (redstoneMode == RedstoneMode.IGNORE) || (redstoneMode == RedstoneMode.LOW && !isTriggered) || (redstoneMode == RedstoneMode.HIGH && isTriggered)
+                    if (shouldAct) {
+                        act()
+                    } else if (fakePlayer.isMining) {
+                        // cancel mining action if fakeplayer was mining
+                        fakePlayer.interruptMining()
+                    }
                 }
             }
         }
@@ -204,7 +216,7 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
     }
 
     override fun createScreenHandler(syncId: Int, playerInventory: PlayerInventory?): ScreenHandler {
-        return SelfGoverningCatalystScreenHandler(syncId, playerInventory, this, pos, mode, aimDirection)
+        return SelfGoverningCatalystScreenHandler(syncId, playerInventory, pos, mode, aimDirection, redstoneMode, this)
     }
 
     override fun setInvStackList(list: DefaultedList<ItemStack>?) {
@@ -227,6 +239,7 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
         Inventories.toTag(tag, inventory)
         tag?.putInt("mode", mode.ordinal)
         tag?.putInt("aim", aimDirection.ordinal)
+        tag?.putInt("redstone", redstoneMode.ordinal)
         return super.toTag(tag)
     }
 
@@ -235,6 +248,7 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
         Inventories.fromTag(tag, inventory)
         mode = ClickMode.values()[tag?.getInt("mode") ?: DEFAULT_MODE.ordinal]
         aimDirection = AimDirection.values()[tag?.getInt("aim") ?: DEFAULT_AIM.ordinal]
+        redstoneMode = RedstoneMode.values()[tag?.getInt("redstone") ?: DEFAULT_REDSTONE.ordinal]
     }
 
     override fun toUpdatePacket(): BlockEntityUpdateS2CPacket? {
@@ -249,5 +263,6 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
         buf.writeBlockPos(pos)
         buf.writeInt(mode.ordinal)
         buf.writeInt(aimDirection.ordinal)
+        buf.writeInt(redstoneMode.ordinal)
     }
 }

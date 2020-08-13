@@ -3,6 +3,7 @@ package io.github.victinix888.selfgoverningcatalyst.screen
 import com.mojang.blaze3d.systems.RenderSystem
 import io.github.victinix888.selfgoverningcatalyst.MODID
 import io.github.victinix888.selfgoverningcatalyst.blockentity.ClickMode
+import io.github.victinix888.selfgoverningcatalyst.blockentity.RedstoneMode
 import io.github.victinix888.selfgoverningcatalyst.entity.AimDirection
 import io.netty.buffer.Unpooled
 import net.fabricmc.fabric.api.network.ClientSidePacketRegistry
@@ -22,6 +23,7 @@ class SelfGoverningCatalystScreen(
 ) : HandledScreen<SelfGoverningCatalystScreenHandler>(screenHandler, playerInventory, title) {
 
     private val texture = Identifier(MODID, "textures/gui/container/self_governing_catalyst.png")
+
     private val clickModeButtonText
         get() = if (mode == ClickMode.RIGHT_CLICK) TranslatableText("gui.$MODID.right_click") else TranslatableText("gui.$MODID.left_click")
     private val aimDirectionButtonText
@@ -30,14 +32,26 @@ class SelfGoverningCatalystScreen(
             AimDirection.UP -> TranslatableText("gui.$MODID.up")
             AimDirection.DOWN -> TranslatableText("gui.$MODID.down")
         }
+    private val redstoneModeButtonText
+        get() = when (redstoneMode) {
+            RedstoneMode.IGNORE -> TranslatableText("gui.$MODID.ignore")
+            RedstoneMode.LOW -> TranslatableText("gui.$MODID.low")
+            RedstoneMode.HIGH -> TranslatableText("gui.$MODID.high")
+        }
 
     private var mode = screenHandler.clickMode
     private var aimDirection = screenHandler.aimDirection
+    private var redstoneMode = screenHandler.redstoneMode
+
+    init {
+        backgroundHeight = 174
+        playerInventoryTitleY = backgroundHeight - 94
+    }
 
     override fun init() {
         super.init()
 
-        addButton(ButtonWidget(x + 8, y + 30, 60, 20, clickModeButtonText, ButtonWidget.PressAction { button ->
+        addButton(ButtonWidget(x + 8, y + 15, 95, 20, clickModeButtonText, ButtonWidget.PressAction { button ->
             val blockEntity = playerInventory.player.world.getBlockEntity(screenHandler.blockPos)
             if (blockEntity != null) {
                 toggleMode()
@@ -52,7 +66,7 @@ class SelfGoverningCatalystScreen(
             }
         }))
 
-        addButton(ButtonWidget(x + 8, y + 50, 60, 20, aimDirectionButtonText, ButtonWidget.PressAction { button ->
+        addButton(ButtonWidget(x + 8, y + 35, 95, 20, aimDirectionButtonText, ButtonWidget.PressAction { button ->
             val blockEntity = playerInventory.player.world.getBlockEntity(screenHandler.blockPos)
             if (blockEntity != null) {
                 toggleAim()
@@ -64,6 +78,21 @@ class SelfGoverningCatalystScreen(
                 ClientSidePacketRegistry.INSTANCE.sendToServer(Identifier(MODID, "aim_button_click_packet"), passedData)
 
                 button.message = aimDirectionButtonText
+            }
+        }))
+
+        addButton(ButtonWidget(x + 8, y + 55, 95, 20, redstoneModeButtonText, ButtonWidget.PressAction { button ->
+            val blockEntity = playerInventory.player.world.getBlockEntity(screenHandler.blockPos)
+            if (blockEntity != null) {
+                toggleRedstone()
+
+                val passedData = PacketByteBuf(Unpooled.buffer())
+                passedData.writeBlockPos(blockEntity.pos)
+                passedData.writeInt(redstoneMode.ordinal)
+
+                ClientSidePacketRegistry.INSTANCE.sendToServer(Identifier(MODID, "redstone_button_click_packet"), passedData)
+
+                button.message = redstoneModeButtonText
             }
         }))
     }
@@ -91,6 +120,14 @@ class SelfGoverningCatalystScreen(
             AimDirection.STRAIGHT -> AimDirection.UP
             AimDirection.UP -> AimDirection.DOWN
             AimDirection.DOWN -> AimDirection.STRAIGHT
+        }
+    }
+
+    private fun toggleRedstone() {
+        redstoneMode = when (redstoneMode) {
+            RedstoneMode.IGNORE -> RedstoneMode.LOW
+            RedstoneMode.LOW -> RedstoneMode.HIGH
+            RedstoneMode.HIGH -> RedstoneMode.IGNORE
         }
     }
 }

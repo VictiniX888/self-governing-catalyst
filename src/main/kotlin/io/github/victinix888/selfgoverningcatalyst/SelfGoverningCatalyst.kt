@@ -2,6 +2,7 @@ package io.github.victinix888.selfgoverningcatalyst
 
 import io.github.victinix888.selfgoverningcatalyst.block.SelfGoverningCatalystBlock
 import io.github.victinix888.selfgoverningcatalyst.blockentity.ClickMode
+import io.github.victinix888.selfgoverningcatalyst.blockentity.RedstoneMode
 import io.github.victinix888.selfgoverningcatalyst.blockentity.SelfGoverningCatalystBlockEntity
 import io.github.victinix888.selfgoverningcatalyst.entity.AimDirection
 import io.github.victinix888.selfgoverningcatalyst.screen.SelfGoverningCatalystScreen
@@ -39,7 +40,7 @@ fun init() {
 
     SELF_GOVERNING_CATALYST_SCREEN_HANDLER = ScreenHandlerRegistry
             .registerExtended(Identifier(MODID, "self_governing_catalyst")) { syncId, inventory, buf ->
-                SelfGoverningCatalystScreenHandler(syncId, inventory, buf.readBlockPos(), ClickMode.values()[buf.readInt()], AimDirection.values()[buf.readInt()])
+                SelfGoverningCatalystScreenHandler(syncId, inventory, buf.readBlockPos(), ClickMode.values()[buf.readInt()], AimDirection.values()[buf.readInt()], RedstoneMode.values()[buf.readInt()])
             }
 
     ServerSidePacketRegistry.INSTANCE.register(Identifier(MODID, "mode_button_click_packet")) { packetContext, packetByteBuf ->
@@ -65,6 +66,20 @@ fun init() {
                 val blockEntity = packetContext.player.world.getBlockEntity(blockPos) as? SelfGoverningCatalystBlockEntity
                 if (blockEntity != null) {
                     blockEntity.aimDirection = aimDirection
+                }
+            }
+        }
+    }
+
+    ServerSidePacketRegistry.INSTANCE.register(Identifier(MODID, "redstone_button_click_packet")) { packetContext, packetByteBuf ->
+        val blockPos = packetByteBuf.readBlockPos()
+        val redstoneMode = RedstoneMode.values()[packetByteBuf.readInt()]
+
+        packetContext.taskQueue.execute {
+            if (packetContext.player.world.canSetBlock(blockPos)) {
+                val blockEntity = packetContext.player.world.getBlockEntity(blockPos) as? SelfGoverningCatalystBlockEntity
+                if (blockEntity != null) {
+                    blockEntity.redstoneMode = redstoneMode
                 }
             }
         }

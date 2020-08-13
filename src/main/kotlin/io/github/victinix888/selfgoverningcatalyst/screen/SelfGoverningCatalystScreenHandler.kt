@@ -2,6 +2,7 @@ package io.github.victinix888.selfgoverningcatalyst.screen
 
 import io.github.victinix888.selfgoverningcatalyst.SELF_GOVERNING_CATALYST_SCREEN_HANDLER
 import io.github.victinix888.selfgoverningcatalyst.blockentity.ClickMode
+import io.github.victinix888.selfgoverningcatalyst.blockentity.RedstoneMode
 import io.github.victinix888.selfgoverningcatalyst.entity.AimDirection
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.entity.player.PlayerInventory
@@ -14,14 +15,12 @@ import net.minecraft.util.math.BlockPos
 
 class SelfGoverningCatalystScreenHandler(syncId: Int,
                                          playerInventory: PlayerInventory?,
-                                         private val inventory: Inventory,
                                          val blockPos: BlockPos,
                                          var clickMode: ClickMode,
-                                         var aimDirection: AimDirection
+                                         var aimDirection: AimDirection,
+                                         var redstoneMode: RedstoneMode,
+                                         private val inventory: Inventory = SimpleInventory(INVENTORY_SIZE)
 ) : ScreenHandler(SELF_GOVERNING_CATALYST_SCREEN_HANDLER, syncId) {
-
-    constructor(syncId: Int, playerInventory: PlayerInventory, blockPos: BlockPos, clickMode: ClickMode, aimDirection: AimDirection)
-            : this(syncId, playerInventory, SimpleInventory(INVENTORY_SIZE), blockPos, clickMode, aimDirection)
 
     companion object {
         const val INVENTORY_SIZE = 9
@@ -34,19 +33,19 @@ class SelfGoverningCatalystScreenHandler(syncId: Int,
         // set block inventory slots
         for (i in 0 until 3) {
             for (j in 0 until 3) {
-                addSlot(Slot(inventory, j + i * 3, 98 + j * 18, 17 + i * 18))
+                addSlot(Slot(inventory, j + i * 3, 116 + j * 18, 17 + i * 18))
             }
         }
 
         // set player inventory slots
         for (i in 0 until 3) {
             for (j in 0 until 9) {
-                addSlot(Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, 84 + i * 18))
+                addSlot(Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, 92 + i * 18))
             }
         }
 
         for (i in 0 until 9) {
-            addSlot(Slot(playerInventory, i, 8 + i * 18, 142))
+            addSlot(Slot(playerInventory, i, 8 + i * 18, 150))
         }
     }
 

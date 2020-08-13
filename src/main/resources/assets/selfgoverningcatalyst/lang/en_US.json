@@ -3,7 +3,12 @@
 
     "gui.selfgoverningcatalyst.right_click": "Right-Click",
     "gui.selfgoverningcatalyst.left_click": "Left-Click",
+
     "gui.selfgoverningcatalyst.straight": "Straight",
     "gui.selfgoverningcatalyst.up": "Up",
-    "gui.selfgoverningcatalyst.down": "Down"
+    "gui.selfgoverningcatalyst.down": "Down",
+
+    "gui.selfgoverningcatalyst.ignore": "Redstone: Ignore",
+    "gui.selfgoverningcatalyst.low": "Redstone: Low",
+    "gui.selfgoverningcatalyst.high": "Redstone: High"
 }

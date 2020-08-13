@@ -8,6 +8,8 @@ import net.minecraft.block.entity.BlockEntity
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemPlacementContext
 import net.minecraft.state.StateManager
+import net.minecraft.state.property.BooleanProperty
+import net.minecraft.state.property.Properties
 import net.minecraft.util.ActionResult
 import net.minecraft.util.Hand
 import net.minecraft.util.ItemScatterer
@@ -21,10 +23,13 @@ class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlo
 
     companion object {
         val DEFAULT_DIRECTION = Direction.NORTH
+
+        // property for whether the block is receiving a redstone signal, has to be manually changed
+        val TRIGGERED: BooleanProperty = Properties.TRIGGERED
     }
 
     init {
-        defaultState = stateManager.defaultState.with(FACING, DEFAULT_DIRECTION)
+        defaultState = stateManager.defaultState.with(FACING, DEFAULT_DIRECTION).with(TRIGGERED, false)
     }
 
     private lateinit var direction: Direction
@@ -35,7 +40,7 @@ class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlo
     }
 
     override fun appendProperties(builder: StateManager.Builder<Block, BlockState>?) {
-        builder?.add(FACING)
+        builder?.add(FACING, TRIGGERED)
     }
 
     override fun getPlacementState(ctx: ItemPlacementContext?): BlockState? {
@@ -66,6 +71,18 @@ class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlo
             return ActionResult.SUCCESS
         } else {
             return ActionResult.CONSUME
+        }
+    }
+
+    override fun neighborUpdate(state: BlockState?, world: World?, pos: BlockPos?, block: Block?, fromPos: BlockPos?, notify: Boolean) {
+        if (world != null && state != null) {
+            val isReceivingRedstoneSignal = world.isReceivingRedstonePower(pos) || world.isReceivingRedstonePower(pos?.up())
+            val wasTriggered = state.get(TRIGGERED)
+            if (isReceivingRedstoneSignal && !wasTriggered) {
+                world.setBlockState(pos, state.with(TRIGGERED, true), 4)
+            } else if (!isReceivingRedstoneSignal && wasTriggered) {
+                world.setBlockState(pos, state.with(TRIGGERED, false), 4)
+            }
         }
     }
 
