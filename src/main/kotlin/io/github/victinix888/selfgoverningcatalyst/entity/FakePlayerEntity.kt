@@ -71,7 +71,10 @@ class FakePlayerEntity(
     }
 
     private fun resetMining() {
+        // resets block breaking progress of the block that was being broken in world
         world.setBlockBreakingInfo(this.entityId, miningPos, -1)
+
+        // resets mining progress of the fakeplayer
         blockBreakProgress = -1
         miningTime = -1
         isMining = false
@@ -101,15 +104,16 @@ class FakePlayerEntity(
     private fun beginMining(blockState: BlockState, blockPos: BlockPos) {
         if (!isMining) {
             if (!blockState.isAir) {
+                miningPos = blockPos.toImmutable()
+                isMining = true
+                miningBlockState = blockState
+
                 blockState.onBlockBreakStart(world, blockPos, this)
                 val currentBreakProgress = blockState.calcBlockBreakingDelta(this, world, blockPos)
 
                 if (currentBreakProgress >= 1F) {
                     finishMining(blockPos)
                 } else {
-                    isMining = true
-                    miningPos = blockPos.toImmutable()
-                    miningBlockState = blockState
                     val currentBreakProgressInt = (currentBreakProgress * 10F).toInt()
                     world.setBlockBreakingInfo(this.entityId, blockPos, currentBreakProgressInt)
                     blockBreakProgress = currentBreakProgressInt
