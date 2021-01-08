@@ -6,7 +6,6 @@ import net.minecraft.block.BlockState
 import net.minecraft.network.ClientConnection
 import net.minecraft.network.NetworkSide
 import net.minecraft.screen.NamedScreenHandlerFactory
-import net.minecraft.screen.ScreenHandler
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.server.network.ServerPlayerInteractionManager
@@ -135,5 +134,4 @@ class FakePlayerEntity(
     override fun playSound(sound: SoundEvent?, volume: Float, pitch: Float) {}
     override fun playSound(event: SoundEvent?, category: SoundCategory?, volume: Float, pitch: Float) {}
     override fun openHandledScreen(factory: NamedScreenHandlerFactory?): OptionalInt { return OptionalInt.empty() }
-    override fun openHandledScreen(handler: ScreenHandler?) {}
 }

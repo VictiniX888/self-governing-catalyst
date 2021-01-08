@@ -204,7 +204,7 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
 
     private fun getEntityLookingAt(entity: LivingEntity): HitResult {
         val entityPos = entity.pos.add(0.0, entity.standingEyeHeight.toDouble(), 0.0)
-        val blockHitResult = entity.rayTrace(3.0, 1.0F, true)
+        val blockHitResult = entity.raycast(3.0, 1.0F, true)
 
         return world?.getOtherEntities(null, Box(entityPos, blockHitResult.pos))?.minBy { it.pos.distanceTo(entityPos) }?.let {
             EntityHitResult(it)

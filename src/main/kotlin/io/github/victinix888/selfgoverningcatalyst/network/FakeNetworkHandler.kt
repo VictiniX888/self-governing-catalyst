@@ -18,7 +18,7 @@ class FakeNetworkHandler(server: MinecraftServer?,
 
     override fun tick() {}
 
-    override fun onGuiClose(packet: GuiCloseC2SPacket?) {}
+    override fun onCloseHandledScreen(packet: CloseHandledScreenC2SPacket?) {}
 
     override fun onSignUpdate(packet: UpdateSignC2SPacket?) {}
 
@@ -44,7 +44,7 @@ class FakeNetworkHandler(server: MinecraftServer?,
 
     override fun onClientSettings(packet: ClientSettingsC2SPacket?) {}
 
-    override fun onClickWindow(packet: ClickWindowC2SPacket?) {}
+    override fun onClickSlot(packet: ClickSlotC2SPacket?) {}
 
     override fun onRecipeBookData(packet: RecipeBookDataC2SPacket?) {}
 
@@ -62,7 +62,7 @@ class FakeNetworkHandler(server: MinecraftServer?,
 
     override fun onUpdateCommandBlock(packet: UpdateCommandBlockC2SPacket?) {}
 
-    override fun onConfirmTransaction(packet: ConfirmGuiActionC2SPacket?) {}
+    override fun onConfirmScreenAction(packet: ConfirmScreenActionC2SPacket?) {}
 
     override fun onPickFromInventory(packet: PickFromInventoryC2SPacket?) {}
 
@@ -80,7 +80,7 @@ class FakeNetworkHandler(server: MinecraftServer?,
 
     override fun onUpdateCommandBlockMinecart(packet: UpdateCommandBlockMinecartC2SPacket?) {}
 
-    override fun onVillagerTradeSelect(packet: SelectVillagerTradeC2SPacket?) {}
+    override fun onMerchantTradeSelect(packet: SelectMerchantTradeC2SPacket?) {}
 
     override fun onUpdateDifficultyLock(packet: UpdateDifficultyLockC2SPacket?) {}
 
@@ -119,4 +119,6 @@ class FakeNetworkHandler(server: MinecraftServer?,
     override fun onCreativeInventoryAction(packet: CreativeInventoryActionC2SPacket?) {}
 
     override fun onBoatPaddleState(packet: BoatPaddleStateC2SPacket?) {}
+
+    override fun onRecipeCategoryOptions(packet: RecipeCategoryOptionsC2SPacket?) {}
 }
