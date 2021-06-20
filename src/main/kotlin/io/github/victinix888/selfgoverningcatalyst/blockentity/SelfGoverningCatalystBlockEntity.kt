@@ -25,7 +25,6 @@ import net.minecraft.server.network.ServerPlayerInteractionManager
 import net.minecraft.server.world.ServerWorld
 import net.minecraft.text.Text
 import net.minecraft.text.TranslatableText
-import net.minecraft.util.ActionResult
 import net.minecraft.util.Hand
 import net.minecraft.util.Tickable
 import net.minecraft.util.collection.DefaultedList
@@ -70,13 +69,13 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
                 if (!it) {
                     direction = world?.getBlockState(pos)?.get(FacingBlock.FACING) ?: DEFAULT_DIRECTION
                     fakePlayer = FakePlayerEntity(
-                            world?.server,
-                            world as ServerWorld,
-                            GameProfile(uuid, "[SGC]"),
-                            ServerPlayerInteractionManager(world as ServerWorld),
-                            calcFakePlayerPos(direction),
-                            direction,
-                            aimDirection
+                        world?.server,
+                        world as ServerWorld,
+                        GameProfile(uuid, "[SGC]"),
+                        ServerPlayerInteractionManager(world as ServerWorld),
+                        calcFakePlayerPos(direction),
+                        direction,
+                        aimDirection
                     )
                 }
             }
@@ -88,7 +87,7 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
                     // determine whether the fakeplayer should act on current tick
                     val shouldAct = (redstoneMode == RedstoneMode.IGNORE) || (redstoneMode == RedstoneMode.LOW && !isTriggered) || (redstoneMode == RedstoneMode.HIGH && isTriggered)
                     if (shouldAct) {
-                        act()
+                        handleAct()
                     } else if (fakePlayer.isMining) {
                         // cancel mining action if fakeplayer was mining
                         fakePlayer.interruptMining()
@@ -97,15 +96,26 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
             }
         }
     }
-
-    private fun act() {
+    
+    private fun handleAct() {
         val itemToUse = getItemToUse()
         // give fakePlayer item from container
         fakePlayer.setStackInHand(Hand.MAIN_HAND, itemToUse)
         fakePlayer.playerTick()
 
         val lookingAtHitResult = getEntityLookingAt(fakePlayer)
+        
+        performAction(itemToUse, lookingAtHitResult)
+        
+        // ensure that any changes to the itemstack in main hand is reflected in the block's inventory
+        // (e.g. bucket left behind from drinking milk)
+        val mainHandItemStack = fakePlayer.getStackInHand(Hand.MAIN_HAND)
+        if (mainHandItemStack != inventory[currentActiveSlot]) {
+            inventory[currentActiveSlot] = mainHandItemStack
+        }
+    }
 
+    private fun performAction(itemToUse: ItemStack, lookingAtHitResult: HitResult) {
         if (mode == ClickMode.RIGHT_CLICK) {
             // cancel mining action if fakePlayer was mining on previous tick
             if (fakePlayer.isMining) {
@@ -121,17 +131,17 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
                     if (!itemToUse.isEmpty) {
                         // try to use item on entity
                         itemToUse.useOnEntity(fakePlayer, lookingAtEntity, Hand.MAIN_HAND).let { result ->
-                            if (result == ActionResult.CONSUME || result == ActionResult.SUCCESS) return
+                            if (result.isAccepted) return
                         }
                     }
                 }
 
                 // try to interact with entity
                 lookingAtEntity.interact(fakePlayer, Hand.MAIN_HAND).let { result ->
-                    if (result == ActionResult.CONSUME || result == ActionResult.SUCCESS) return
+                    if (result.isAccepted) return
                 }
                 lookingAtEntity.interactAt(fakePlayer, lookingAtHitResult.pos, Hand.MAIN_HAND).let { result ->
-                    if (result == ActionResult.CONSUME || result == ActionResult.SUCCESS) return
+                    if (result.isAccepted) return
                 }
 
             } else if (lookingAtHitResult.type == HitResult.Type.BLOCK) {
@@ -143,21 +153,24 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
                     if (!itemToUse.isEmpty) {
                         // try to use item on block it is looking at
                         itemToUse.useOnBlock(ItemUsageContext(fakePlayer, Hand.MAIN_HAND, lookingAtHitResult)).let { result ->
-                            if (result == ActionResult.CONSUME || result == ActionResult.SUCCESS) return
+                            if (result.isAccepted) return
                         }
                     }
 
                     // try to use block normally
                     lookingAtBlockState.onUse(world, fakePlayer, Hand.MAIN_HAND, lookingAtHitResult).let { result ->
-                        if (result == ActionResult.CONSUME || result == ActionResult.SUCCESS) return
+                        if (result.isAccepted) return
                     }
                 }
             }
 
             if (!itemToUse.isEmpty) {
                 // try to use item normally
-                itemToUse.use(world, fakePlayer, Hand.MAIN_HAND).let { result ->
-                    if (result.result == ActionResult.SUCCESS || result.result == ActionResult.CONSUME) return
+                itemToUse.use(world, fakePlayer, Hand.MAIN_HAND).let { typedResult ->
+                    if (typedResult.result.isAccepted) {
+                        fakePlayer.setStackInHand(Hand.MAIN_HAND, typedResult.value)
+                        return
+                    }
                 }
             }
         } else {
@@ -182,13 +195,6 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
                     fakePlayer.tickMining(lookingAtBlockState, lookingAtHitResult.blockPos)
                 }
             }
-        }
-
-        // ensure that any changes to the itemstack in main hand is reflected in the block's inventory
-        // (e.g. bucket left behind from drinking milk)
-        val mainHandItemStack = fakePlayer.getStackInHand(Hand.MAIN_HAND)
-        if (mainHandItemStack != inventory[currentActiveSlot]) {
-            inventory[currentActiveSlot] = mainHandItemStack
         }
     }
 
