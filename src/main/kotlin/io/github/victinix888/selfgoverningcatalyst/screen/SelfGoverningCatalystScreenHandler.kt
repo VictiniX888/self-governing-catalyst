@@ -13,13 +13,14 @@ import net.minecraft.screen.ScreenHandler
 import net.minecraft.screen.slot.Slot
 import net.minecraft.util.math.BlockPos
 
-class SelfGoverningCatalystScreenHandler(syncId: Int,
-                                         playerInventory: PlayerInventory?,
-                                         val blockPos: BlockPos,
-                                         var clickMode: ClickMode,
-                                         var aimDirection: AimDirection,
-                                         var redstoneMode: RedstoneMode,
-                                         private val inventory: Inventory = SimpleInventory(INVENTORY_SIZE)
+class SelfGoverningCatalystScreenHandler(
+    syncId: Int,
+    playerInventory: PlayerInventory?,
+    val blockPos: BlockPos,
+    var clickMode: ClickMode,
+    var aimDirection: AimDirection,
+    var redstoneMode: RedstoneMode,
+    private val inventory: Inventory = SimpleInventory(INVENTORY_SIZE)
 ) : ScreenHandler(SELF_GOVERNING_CATALYST_SCREEN_HANDLER, syncId) {
 
     companion object {

@@ -10,6 +10,7 @@ import io.github.victinix888.selfgoverningcatalyst.screen.SelfGoverningCatalystS
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory
 import net.minecraft.block.BlockState
 import net.minecraft.block.FacingBlock
+import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.entity.LootableContainerBlockEntity
 import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.player.PlayerInventory
@@ -26,23 +27,26 @@ import net.minecraft.server.world.ServerWorld
 import net.minecraft.text.Text
 import net.minecraft.text.TranslatableText
 import net.minecraft.util.Hand
-import net.minecraft.util.Tickable
 import net.minecraft.util.collection.DefaultedList
 import net.minecraft.util.hit.BlockHitResult
 import net.minecraft.util.hit.EntityHitResult
 import net.minecraft.util.hit.HitResult
+import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Box
 import net.minecraft.util.math.Direction
 import net.minecraft.util.math.Vec3d
+import net.minecraft.world.GameMode
+import net.minecraft.world.World
 import java.util.*
 
-class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVERNING_CATALYST_BLOCK_ENTITY), Tickable, ExtendedScreenHandlerFactory {
+class SelfGoverningCatalystBlockEntity(pos: BlockPos?, state: BlockState?) : LootableContainerBlockEntity(SELF_GOVERNING_CATALYST_BLOCK_ENTITY, pos, state), ExtendedScreenHandlerFactory {
 
     private val initInventory = DefaultedList.ofSize(INVENTORY_SIZE, ItemStack.EMPTY)
     private var currentActiveSlot = 0
 
     private val uuid = UUID.fromString("8e08e7ee-fb54-4aa2-9019-0ab8b7e6d4a9")
     private lateinit var fakePlayer: FakePlayerEntity
+    private lateinit var fakePlayerInteractionManager: ServerPlayerInteractionManager
     private var inventory = initInventory
 
     var mode = DEFAULT_MODE
@@ -62,39 +66,31 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
         private val DEFAULT_REDSTONE = RedstoneMode.IGNORE
     }
 
-    override fun tick() {
-        if (!this::fakePlayer.isInitialized) {
-            // only create fakePlayer on server side, on the first tick
-            world?.isClient?.let { client ->
-                if (!client) {
-                    val direction = world?.getBlockState(pos)?.get(FacingBlock.FACING) ?: DEFAULT_DIRECTION
-                    fakePlayer = FakePlayerEntity(
-                        world?.server,
-                        world as ServerWorld,
-                        GameProfile(uuid, "[SGC]"),
-                        ServerPlayerInteractionManager(world as ServerWorld),
-                        initInventory,
-                        calcFakePlayerPos(direction),
-                        direction,
-                        aimDirection
-                    )
-                    inventory = fakePlayer.inventory.main
-                }
-            }
+    fun serverTick(world: World?, pos: BlockPos?, state: BlockState?, blockEntity: BlockEntity?) {
+        if (!this::fakePlayer.isInitialized || !this::fakePlayerInteractionManager.isInitialized) {
+            val direction = world?.getBlockState(pos)?.get(FacingBlock.FACING) ?: DEFAULT_DIRECTION
+            fakePlayer = FakePlayerEntity(
+                world?.server,
+                world as ServerWorld,
+                GameProfile(uuid, "[SGC]"),
+                initInventory,
+                calcFakePlayerPos(direction),
+                direction,
+                aimDirection
+            )
+            inventory = fakePlayer.inventory.main
+            fakePlayerInteractionManager = ServerPlayerInteractionManager(fakePlayer)
+            fakePlayerInteractionManager.changeGameMode(GameMode.SURVIVAL)
         } else {
-            world?.isClient?.let { client ->
-                if (!client) {
-                    // determine whether the block is receiving a redstone signal
-                    val isTriggered by lazy { world?.getBlockState(pos)?.get(SelfGoverningCatalystBlock.TRIGGERED) ?: false }
-                    // determine whether the fakeplayer should act on current tick
-                    val shouldAct = (redstoneMode == RedstoneMode.IGNORE) || (redstoneMode == RedstoneMode.LOW && !isTriggered) || (redstoneMode == RedstoneMode.HIGH && isTriggered)
-                    if (shouldAct) {
-                        handleAct()
-                    } else if (fakePlayer.isMining) {
-                        // cancel mining action if fakeplayer was mining
-                        fakePlayer.interruptMining()
-                    }
-                }
+            // determine whether the block is receiving a redstone signal
+            val isTriggered by lazy { world?.getBlockState(pos)?.get(SelfGoverningCatalystBlock.TRIGGERED) ?: false }
+            // determine whether the fakeplayer should act on current tick
+            val shouldAct = (redstoneMode == RedstoneMode.IGNORE) || (redstoneMode == RedstoneMode.LOW && !isTriggered) || (redstoneMode == RedstoneMode.HIGH && isTriggered)
+            if (shouldAct) {
+                handleAct()
+            } else if (fakePlayer.isMining) {
+                // cancel mining action if fakeplayer was mining
+                fakePlayer.interruptMining()
             }
         }
     }
@@ -248,22 +244,22 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
         return INVENTORY_SIZE
     }
 
-    override fun writeNbt(tag: NbtCompound?): NbtCompound {
-        Inventories.writeNbt(tag, inventory)
-        tag?.putInt("mode", mode.ordinal)
-        tag?.putInt("aim", aimDirection.ordinal)
-        tag?.putInt("redstone", redstoneMode.ordinal)
-        return super.writeNbt(tag)
+    override fun writeNbt(nbt: NbtCompound?): NbtCompound {
+        Inventories.writeNbt(nbt, inventory)
+        nbt?.putInt("mode", mode.ordinal)
+        nbt?.putInt("aim", aimDirection.ordinal)
+        nbt?.putInt("redstone", redstoneMode.ordinal)
+        return super.writeNbt(nbt)
     }
 
-    override fun fromTag(state: BlockState?, tag: NbtCompound?) {
-        super.fromTag(state, tag)
-        Inventories.readNbt(tag, initInventory)
+    override fun readNbt(nbt: NbtCompound?) {
+        super.readNbt(nbt)
+        Inventories.readNbt(nbt, initInventory)
         
         // Initialize settings
-        mode = ClickMode.values()[tag?.getInt("mode") ?: DEFAULT_MODE.ordinal]
-        aimDirection = AimDirection.values()[tag?.getInt("aim") ?: DEFAULT_AIM.ordinal]
-        redstoneMode = RedstoneMode.values()[tag?.getInt("redstone") ?: DEFAULT_REDSTONE.ordinal]
+        mode = ClickMode.values()[nbt?.getInt("mode") ?: DEFAULT_MODE.ordinal]
+        aimDirection = AimDirection.values()[nbt?.getInt("aim") ?: DEFAULT_AIM.ordinal]
+        redstoneMode = RedstoneMode.values()[nbt?.getInt("redstone") ?: DEFAULT_REDSTONE.ordinal]
     }
 
     override fun toUpdatePacket(): BlockEntityUpdateS2CPacket {

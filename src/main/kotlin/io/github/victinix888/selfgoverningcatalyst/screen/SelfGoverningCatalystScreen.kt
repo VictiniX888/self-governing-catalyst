@@ -7,8 +7,10 @@ import io.github.victinix888.selfgoverningcatalyst.blockentity.RedstoneMode
 import io.github.victinix888.selfgoverningcatalyst.entity.AimDirection
 import io.netty.buffer.Unpooled
 import net.fabricmc.fabric.api.network.ClientSidePacketRegistry
+import net.minecraft.client.gui.screen.ingame.CraftingScreen
 import net.minecraft.client.gui.screen.ingame.HandledScreen
 import net.minecraft.client.gui.widget.ButtonWidget
+import net.minecraft.client.render.GameRenderer
 import net.minecraft.client.util.math.MatrixStack
 import net.minecraft.entity.player.PlayerInventory
 import net.minecraft.network.PacketByteBuf
@@ -18,7 +20,7 @@ import net.minecraft.util.Identifier
 
 class SelfGoverningCatalystScreen(
         screenHandler: SelfGoverningCatalystScreenHandler,
-        playerInventory: PlayerInventory,
+        private val playerInventory: PlayerInventory,
         title: Text
 ) : HandledScreen<SelfGoverningCatalystScreenHandler>(screenHandler, playerInventory, title) {
 
@@ -51,7 +53,7 @@ class SelfGoverningCatalystScreen(
     override fun init() {
         super.init()
 
-        addButton(ButtonWidget(x + 8, y + 15, 95, 20, clickModeButtonText, ButtonWidget.PressAction { button ->
+        addDrawableChild(ButtonWidget(x + 8, y + 15, 95, 20, clickModeButtonText) { button ->
             val blockEntity = playerInventory.player.world.getBlockEntity(screenHandler.blockPos)
             if (blockEntity != null) {
                 toggleMode()
@@ -60,13 +62,16 @@ class SelfGoverningCatalystScreen(
                 passedData.writeBlockPos(blockEntity.pos)
                 passedData.writeInt(mode.ordinal)
 
-                ClientSidePacketRegistry.INSTANCE.sendToServer(Identifier(MODID, "mode_button_click_packet"), passedData)
+                ClientSidePacketRegistry.INSTANCE.sendToServer(
+                    Identifier(MODID, "mode_button_click_packet"),
+                    passedData
+                )
 
                 button.message = clickModeButtonText
             }
-        }))
+        })
 
-        addButton(ButtonWidget(x + 8, y + 35, 95, 20, aimDirectionButtonText, ButtonWidget.PressAction { button ->
+        addDrawableChild(ButtonWidget(x + 8, y + 35, 95, 20, aimDirectionButtonText) { button ->
             val blockEntity = playerInventory.player.world.getBlockEntity(screenHandler.blockPos)
             if (blockEntity != null) {
                 toggleAim()
@@ -79,9 +84,9 @@ class SelfGoverningCatalystScreen(
 
                 button.message = aimDirectionButtonText
             }
-        }))
+        })
 
-        addButton(ButtonWidget(x + 8, y + 55, 95, 20, redstoneModeButtonText, ButtonWidget.PressAction { button ->
+        addDrawableChild(ButtonWidget(x + 8, y + 55, 95, 20, redstoneModeButtonText) { button ->
             val blockEntity = playerInventory.player.world.getBlockEntity(screenHandler.blockPos)
             if (blockEntity != null) {
                 toggleRedstone()
@@ -90,11 +95,14 @@ class SelfGoverningCatalystScreen(
                 passedData.writeBlockPos(blockEntity.pos)
                 passedData.writeInt(redstoneMode.ordinal)
 
-                ClientSidePacketRegistry.INSTANCE.sendToServer(Identifier(MODID, "redstone_button_click_packet"), passedData)
+                ClientSidePacketRegistry.INSTANCE.sendToServer(
+                    Identifier(MODID, "redstone_button_click_packet"),
+                    passedData
+                )
 
                 button.message = redstoneModeButtonText
             }
-        }))
+        })
     }
 
     override fun render(matrices: MatrixStack?, mouseX: Int, mouseY: Int, delta: Float) {
@@ -104,11 +112,12 @@ class SelfGoverningCatalystScreen(
     }
 
     override fun drawBackground(matrices: MatrixStack?, delta: Float, mouseX: Int, mouseY: Int) {
-        RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F)
-        client?.textureManager?.bindTexture(texture)
-        val k = (width - backgroundWidth) / 2
-        val l = (height - backgroundHeight) / 2
-        drawTexture(matrices, k, l, 0, 0, backgroundWidth, backgroundHeight)
+        RenderSystem.setShader { GameRenderer.getPositionTexShader() }
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f)
+        RenderSystem.setShaderTexture(0, texture)
+        val i = (width - backgroundWidth) / 2
+        val j = (height - backgroundHeight) / 2
+        drawTexture(matrices, i, j, 0, 0, backgroundWidth, backgroundHeight)
     }
 
     private fun toggleMode() {

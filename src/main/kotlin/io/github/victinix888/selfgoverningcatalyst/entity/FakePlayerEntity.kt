@@ -24,12 +24,11 @@ class FakePlayerEntity(
     server: MinecraftServer?,
     world: ServerWorld?,
     profile: GameProfile,
-    interactionManager: ServerPlayerInteractionManager,
     initInventory: DefaultedList<ItemStack>,
     pos: Vec3d,
     private val direction: Direction,
     aim: AimDirection
-) : ServerPlayerEntity(server, world, profile, interactionManager) {
+) : ServerPlayerEntity(server, world, profile) {
 
     var isMining = false
     private var miningTime = -1
@@ -44,7 +43,6 @@ class FakePlayerEntity(
             Direction.UP -> setRotation(direction.asRotation(), -90F)
             Direction.DOWN -> setRotation(direction.asRotation(), 90F)
         }
-        interactionManager.setGameMode(GameMode.SURVIVAL, GameMode.SURVIVAL)
         networkHandler = FakeNetworkHandler(world?.server, ClientConnection(NetworkSide.SERVERBOUND), this)
 
         // Initialize inventory
@@ -77,7 +75,7 @@ class FakePlayerEntity(
 
     private fun resetMining() {
         // resets block breaking progress of the block that was being broken in world
-        world.setBlockBreakingInfo(this.entityId, miningPos, -1)
+        world.setBlockBreakingInfo(id, miningPos, -1)
 
         // resets mining progress of the fakeplayer
         blockBreakProgress = -1
@@ -99,7 +97,7 @@ class FakePlayerEntity(
         } else {
             val currentBreakProgressInt = (currentBreakProgress * 10F).toInt()
             if (currentBreakProgressInt != blockBreakProgress) {
-                world.setBlockBreakingInfo(this.entityId, blockPos, currentBreakProgressInt)
+                world.setBlockBreakingInfo(id, blockPos, currentBreakProgressInt)
                 blockBreakProgress = currentBreakProgressInt
             }
         }
@@ -120,7 +118,7 @@ class FakePlayerEntity(
                     finishMining(blockPos)
                 } else {
                     val currentBreakProgressInt = (currentBreakProgress * 10F).toInt()
-                    world.setBlockBreakingInfo(this.entityId, blockPos, currentBreakProgressInt)
+                    world.setBlockBreakingInfo(id, blockPos, currentBreakProgressInt)
                     blockBreakProgress = currentBreakProgressInt
                 }
             }

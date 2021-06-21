@@ -5,6 +5,8 @@ import net.fabricmc.fabric.api.`object`.builder.v1.block.FabricBlockSettings
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory
 import net.minecraft.block.*
 import net.minecraft.block.entity.BlockEntity
+import net.minecraft.block.entity.BlockEntityTicker
+import net.minecraft.block.entity.BlockEntityType
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemPlacementContext
 import net.minecraft.state.StateManager
@@ -34,9 +36,8 @@ class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlo
 
     private lateinit var direction: Direction
 
-    override fun createBlockEntity(world: BlockView?): BlockEntity {
-
-        return SelfGoverningCatalystBlockEntity()
+    override fun createBlockEntity(pos: BlockPos?, state: BlockState?): BlockEntity? {
+        return SelfGoverningCatalystBlockEntity(pos, state)
     }
 
     override fun appendProperties(builder: StateManager.Builder<Block, BlockState>?) {
@@ -88,6 +89,22 @@ class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlo
 
             super.onStateReplaced(state, world, pos, newState, moved)
 
+        }
+    }
+    
+    override fun <T : BlockEntity?> getTicker(
+        world: World?,
+        state: BlockState?,
+        type: BlockEntityType<T>?
+    ): BlockEntityTicker<T> {
+        return BlockEntityTicker<T> { world, pos, state, blockEntity ->
+            if (blockEntity is SelfGoverningCatalystBlockEntity) {
+                world?.isClient?.let { client ->
+                    if (!client) {
+                        blockEntity.serverTick(world, pos, state, blockEntity)
+                    }
+                }
+            }
         }
     }
 }

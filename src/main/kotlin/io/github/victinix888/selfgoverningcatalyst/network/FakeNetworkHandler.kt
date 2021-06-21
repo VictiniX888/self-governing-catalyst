@@ -61,9 +61,7 @@ class FakeNetworkHandler(server: MinecraftServer?,
     override fun onPlayerAction(packet: PlayerActionC2SPacket?) {}
 
     override fun onUpdateCommandBlock(packet: UpdateCommandBlockC2SPacket?) {}
-
-    override fun onConfirmScreenAction(packet: ConfirmScreenActionC2SPacket?) {}
-
+    
     override fun onPickFromInventory(packet: PickFromInventoryC2SPacket?) {}
 
     override fun onVehicleMove(packet: VehicleMoveC2SPacket?) {}
@@ -121,4 +119,16 @@ class FakeNetworkHandler(server: MinecraftServer?,
     override fun onBoatPaddleState(packet: BoatPaddleStateC2SPacket?) {}
 
     override fun onRecipeCategoryOptions(packet: RecipeCategoryOptionsC2SPacket?) {}
+
+    override fun requestTeleport(
+        x: Double,
+        y: Double,
+        z: Double,
+        yaw: Float,
+        pitch: Float,
+        flags: MutableSet<PlayerPositionLookS2CPacket.Flag>?,
+        shouldDismount: Boolean
+    ) {}
+
+    override fun requestTeleportAndDismount(x: Double, y: Double, z: Double, yaw: Float, pitch: Float) {}
 }

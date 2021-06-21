@@ -25,7 +25,7 @@ const val MODID = "selfgoverningcatalyst"
 
 val SELF_GOVERNING_CATALYST = SelfGoverningCatalystBlock(FabricBlockSettings.of(Material.METAL))
 val SELF_GOVERNING_CATALYST_BLOCK_ENTITY: BlockEntityType<SelfGoverningCatalystBlockEntity> = BlockEntityType.Builder
-        .create(Supplier { SelfGoverningCatalystBlockEntity() }, SELF_GOVERNING_CATALYST)
+        .create({ pos, state -> SelfGoverningCatalystBlockEntity(pos, state) }, SELF_GOVERNING_CATALYST)
         .build(null)
 
 lateinit var SELF_GOVERNING_CATALYST_SCREEN_HANDLER: ScreenHandlerType<SelfGoverningCatalystScreenHandler>
