@@ -34,7 +34,7 @@ class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlo
 
     private lateinit var direction: Direction
 
-    override fun createBlockEntity(world: BlockView?): BlockEntity? {
+    override fun createBlockEntity(world: BlockView?): BlockEntity {
 
         return SelfGoverningCatalystBlockEntity()
     }

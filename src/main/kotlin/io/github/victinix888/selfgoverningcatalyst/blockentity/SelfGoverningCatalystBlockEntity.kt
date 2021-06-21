@@ -16,7 +16,7 @@ import net.minecraft.entity.player.PlayerInventory
 import net.minecraft.inventory.Inventories
 import net.minecraft.item.ItemStack
 import net.minecraft.item.ItemUsageContext
-import net.minecraft.nbt.CompoundTag
+import net.minecraft.nbt.NbtCompound
 import net.minecraft.network.PacketByteBuf
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket
 import net.minecraft.screen.ScreenHandler
@@ -210,7 +210,9 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
         val entityPos = entity.pos.add(0.0, entity.standingEyeHeight.toDouble(), 0.0)
         val blockHitResult = entity.raycast(3.0, 1.0F, true)
 
-        return world?.getOtherEntities(null, Box(entityPos, blockHitResult.pos))?.minBy { it.pos.distanceTo(entityPos) }?.let {
+        return world?.getOtherEntities(null, Box(entityPos, blockHitResult.pos))
+            ?.minByOrNull { it.pos.distanceTo(entityPos) }
+            ?.let {
             EntityHitResult(it)
         } ?: blockHitResult
     }
@@ -246,17 +248,17 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
         return INVENTORY_SIZE
     }
 
-    override fun toTag(tag: CompoundTag?): CompoundTag {
-        Inventories.toTag(tag, inventory)
+    override fun writeNbt(tag: NbtCompound?): NbtCompound {
+        Inventories.writeNbt(tag, inventory)
         tag?.putInt("mode", mode.ordinal)
         tag?.putInt("aim", aimDirection.ordinal)
         tag?.putInt("redstone", redstoneMode.ordinal)
-        return super.toTag(tag)
+        return super.writeNbt(tag)
     }
 
-    override fun fromTag(state: BlockState?, tag: CompoundTag?) {
+    override fun fromTag(state: BlockState?, tag: NbtCompound?) {
         super.fromTag(state, tag)
-        Inventories.fromTag(tag, initInventory)
+        Inventories.readNbt(tag, initInventory)
         
         // Initialize settings
         mode = ClickMode.values()[tag?.getInt("mode") ?: DEFAULT_MODE.ordinal]
@@ -264,12 +266,12 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
         redstoneMode = RedstoneMode.values()[tag?.getInt("redstone") ?: DEFAULT_REDSTONE.ordinal]
     }
 
-    override fun toUpdatePacket(): BlockEntityUpdateS2CPacket? {
-        return BlockEntityUpdateS2CPacket(pos, -1, toInitialChunkDataTag())
+    override fun toUpdatePacket(): BlockEntityUpdateS2CPacket {
+        return BlockEntityUpdateS2CPacket(pos, -1, toInitialChunkDataNbt())
     }
 
-    override fun toInitialChunkDataTag(): CompoundTag {
-        return toTag(CompoundTag())
+    override fun toInitialChunkDataNbt(): NbtCompound {
+        return writeNbt(NbtCompound())
     }
 
     override fun writeScreenOpeningData(player: ServerPlayerEntity?, buf: PacketByteBuf) {

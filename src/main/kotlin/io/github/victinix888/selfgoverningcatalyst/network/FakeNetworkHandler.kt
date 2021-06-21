@@ -110,7 +110,7 @@ class FakeNetworkHandler(server: MinecraftServer?,
 
     override fun onUpdateBeacon(packet: UpdateBeaconC2SPacket?) {}
 
-    override fun teleportRequest(x: Double, y: Double, z: Double, yaw: Float, pitch: Float, set: MutableSet<PlayerPositionLookS2CPacket.Flag>?) {}
+    override fun requestTeleport(x: Double, y: Double, z: Double, yaw: Float, pitch: Float, set: MutableSet<PlayerPositionLookS2CPacket.Flag>?) {}
 
     override fun onResourcePackStatus(packet: ResourcePackStatusC2SPacket?) {}
 
