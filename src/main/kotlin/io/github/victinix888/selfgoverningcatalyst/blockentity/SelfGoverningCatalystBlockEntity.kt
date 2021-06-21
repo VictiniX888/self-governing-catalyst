@@ -38,13 +38,13 @@ import java.util.*
 
 class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVERNING_CATALYST_BLOCK_ENTITY), Tickable, ExtendedScreenHandlerFactory {
 
-    private var inventory = DefaultedList.ofSize(INVENTORY_SIZE, ItemStack.EMPTY)
+    private val initInventory = DefaultedList.ofSize(INVENTORY_SIZE, ItemStack.EMPTY)
     private var currentActiveSlot = 0
 
     private val uuid = UUID.fromString("8e08e7ee-fb54-4aa2-9019-0ab8b7e6d4a9")
     private lateinit var fakePlayer: FakePlayerEntity
+    private var inventory = initInventory
 
-    private lateinit var direction: Direction
     var mode = DEFAULT_MODE
     var aimDirection = DEFAULT_AIM
         set(value) {
@@ -64,19 +64,21 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
 
     override fun tick() {
         if (!this::fakePlayer.isInitialized) {
-            // only create fakePlayer on server side
-            world?.isClient?.let {
-                if (!it) {
-                    direction = world?.getBlockState(pos)?.get(FacingBlock.FACING) ?: DEFAULT_DIRECTION
+            // only create fakePlayer on server side, on the first tick
+            world?.isClient?.let { client ->
+                if (!client) {
+                    val direction = world?.getBlockState(pos)?.get(FacingBlock.FACING) ?: DEFAULT_DIRECTION
                     fakePlayer = FakePlayerEntity(
                         world?.server,
                         world as ServerWorld,
                         GameProfile(uuid, "[SGC]"),
                         ServerPlayerInteractionManager(world as ServerWorld),
+                        initInventory,
                         calcFakePlayerPos(direction),
                         direction,
                         aimDirection
                     )
+                    inventory = fakePlayer.inventory.main
                 }
             }
         } else {
@@ -107,12 +109,8 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
         
         performAction(itemToUse, lookingAtHitResult)
         
-        // ensure that any changes to the itemstack in main hand is reflected in the block's inventory
-        // (e.g. bucket left behind from drinking milk)
-        val mainHandItemStack = fakePlayer.getStackInHand(Hand.MAIN_HAND)
-        if (mainHandItemStack != inventory[currentActiveSlot]) {
-            inventory[currentActiveSlot] = mainHandItemStack
-        }
+        // eject any items that do not fit in the block's inventory
+        fakePlayer.ejectItemsAfter(INVENTORY_SIZE)
     }
 
     private fun performAction(itemToUse: ItemStack, lookingAtHitResult: HitResult) {
@@ -233,7 +231,7 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
     }
 
     override fun setInvStackList(list: DefaultedList<ItemStack>?) {
-        inventory = list
+        inventory = list ?: DefaultedList.ofSize(INVENTORY_SIZE, ItemStack.EMPTY)
     }
 
     override fun getContainerName(): Text {
@@ -245,7 +243,7 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
     }
 
     override fun size(): Int {
-        return inventory.size
+        return INVENTORY_SIZE
     }
 
     override fun toTag(tag: CompoundTag?): CompoundTag {
@@ -258,7 +256,9 @@ class SelfGoverningCatalystBlockEntity : LootableContainerBlockEntity(SELF_GOVER
 
     override fun fromTag(state: BlockState?, tag: CompoundTag?) {
         super.fromTag(state, tag)
-        Inventories.fromTag(tag, inventory)
+        Inventories.fromTag(tag, initInventory)
+        
+        // Initialize settings
         mode = ClickMode.values()[tag?.getInt("mode") ?: DEFAULT_MODE.ordinal]
         aimDirection = AimDirection.values()[tag?.getInt("aim") ?: DEFAULT_AIM.ordinal]
         redstoneMode = RedstoneMode.values()[tag?.getInt("redstone") ?: DEFAULT_REDSTONE.ordinal]

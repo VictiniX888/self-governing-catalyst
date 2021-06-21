@@ -3,6 +3,7 @@ package io.github.victinix888.selfgoverningcatalyst.entity
 import com.mojang.authlib.GameProfile
 import io.github.victinix888.selfgoverningcatalyst.network.FakeNetworkHandler
 import net.minecraft.block.BlockState
+import net.minecraft.item.ItemStack
 import net.minecraft.network.ClientConnection
 import net.minecraft.network.NetworkSide
 import net.minecraft.screen.NamedScreenHandlerFactory
@@ -12,6 +13,7 @@ import net.minecraft.server.network.ServerPlayerInteractionManager
 import net.minecraft.server.world.ServerWorld
 import net.minecraft.sound.SoundCategory
 import net.minecraft.sound.SoundEvent
+import net.minecraft.util.collection.DefaultedList
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
 import net.minecraft.util.math.Vec3d
@@ -19,13 +21,14 @@ import net.minecraft.world.GameMode
 import java.util.*
 
 class FakePlayerEntity(
-        server: MinecraftServer?,
-        world: ServerWorld?,
-        profile: GameProfile,
-        interactionManager: ServerPlayerInteractionManager,
-        pos: Vec3d,
-        private val direction: Direction,
-        aim: AimDirection
+    server: MinecraftServer?,
+    world: ServerWorld?,
+    profile: GameProfile,
+    interactionManager: ServerPlayerInteractionManager,
+    initInventory: DefaultedList<ItemStack>,
+    pos: Vec3d,
+    private val direction: Direction,
+    aim: AimDirection
 ) : ServerPlayerEntity(server, world, profile, interactionManager) {
 
     var isMining = false
@@ -43,6 +46,9 @@ class FakePlayerEntity(
         }
         interactionManager.setGameMode(GameMode.SURVIVAL, GameMode.SURVIVAL)
         networkHandler = FakeNetworkHandler(world?.server, ClientConnection(NetworkSide.SERVERBOUND), this)
+
+        // Initialize inventory
+        initInventory.forEachIndexed { i, stack -> if (i < inventory.main.size) inventory.main[i] = stack }
     }
 
     // code mostly taken from ServerPlayerInteractionManager::update
@@ -126,6 +132,17 @@ class FakePlayerEntity(
             Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST -> aimDirection.pitch
             Direction.UP -> -90F
             Direction.DOWN -> 90F
+        }
+    }
+    
+    fun ejectItemsAfter(index: Int) {
+        val iterator = inventory.main.listIterator(index)
+        while (iterator.hasNext()) {
+            val itemStack = iterator.next()
+            if (!itemStack.isEmpty) {
+                iterator.set(ItemStack.EMPTY)
+                dropStack(itemStack)
+            }
         }
     }
 
