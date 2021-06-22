@@ -80,27 +80,28 @@ class SelfGoverningCatalystBlockEntity(pos: BlockPos?, state: BlockState?) : Loo
         }
 
         private fun handleAct(fakePlayer: FakePlayerEntity, world: World, blockEntity: SelfGoverningCatalystBlockEntity) {
-            val itemToUse = getItemToUse(blockEntity.inventory, blockEntity)
             // give fakePlayer item from container
-            fakePlayer.setStackInHand(Hand.MAIN_HAND, itemToUse)
+            val slotToSelect = getItemSlotToSelect(blockEntity.inventory, blockEntity)
+            fakePlayer.inventory.selectedSlot = slotToSelect
             fakePlayer.playerTick()
 
             val lookingAtHitResult = getEntityLookingAt(fakePlayer, world)
 
+            val itemToUse = fakePlayer.mainHandStack
             performAction(itemToUse, lookingAtHitResult, fakePlayer, world, blockEntity.mode)
 
             // eject any items that do not fit in the block's inventory
             fakePlayer.ejectItemsAfter(INVENTORY_SIZE)
         }
 
-        private fun getItemToUse(inventory: DefaultedList<ItemStack>, blockEntity: SelfGoverningCatalystBlockEntity): ItemStack {
+        private fun getItemSlotToSelect(inventory: DefaultedList<ItemStack>, blockEntity: SelfGoverningCatalystBlockEntity): Int {
             if (inventory[blockEntity.currentActiveSlot].isEmpty) {
                 (inventory.indexOfFirst { !it.isEmpty }).let {
                     blockEntity.currentActiveSlot = if (it >= 0) it else 0
                 }
             }
 
-            return inventory[blockEntity.currentActiveSlot]
+            return blockEntity.currentActiveSlot
         }
 
         private fun getEntityLookingAt(entity: LivingEntity, world: World): HitResult {
