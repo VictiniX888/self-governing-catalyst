@@ -1,5 +1,6 @@
 package io.github.victinix888.selfgoverningcatalyst.block
 
+import io.github.victinix888.selfgoverningcatalyst.SELF_GOVERNING_CATALYST_BLOCK_ENTITY
 import io.github.victinix888.selfgoverningcatalyst.blockentity.SelfGoverningCatalystBlockEntity
 import net.fabricmc.fabric.api.`object`.builder.v1.block.FabricBlockSettings
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory
@@ -18,7 +19,6 @@ import net.minecraft.util.ItemScatterer
 import net.minecraft.util.hit.BlockHitResult
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
-import net.minecraft.world.BlockView
 import net.minecraft.world.World
 
 class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlock(blockSettings), BlockEntityProvider {
@@ -36,7 +36,7 @@ class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlo
 
     private lateinit var direction: Direction
 
-    override fun createBlockEntity(pos: BlockPos?, state: BlockState?): BlockEntity? {
+    override fun createBlockEntity(pos: BlockPos?, state: BlockState?): BlockEntity {
         return SelfGoverningCatalystBlockEntity(pos, state)
     }
 
@@ -53,18 +53,18 @@ class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlo
         return world?.getBlockEntity(pos) as? ExtendedScreenHandlerFactory
     }
 
-    @Suppress("deprecation")
+    @Suppress("DEPRECATION")
     override fun onUse(state: BlockState?, world: World?, pos: BlockPos?, player: PlayerEntity?, hand: Hand?, hit: BlockHitResult?): ActionResult {
-        if (world != null && player != null) {
+        return if (world != null && player != null) {
             if (!world.isClient) {
                 if (world.getBlockEntity(pos) is SelfGoverningCatalystBlockEntity) {
                     val factory = createScreenHandlerFactory(state, world, pos)
                     player.openHandledScreen(factory)
                 }
             }
-            return ActionResult.SUCCESS
+            ActionResult.SUCCESS
         } else {
-            return ActionResult.CONSUME
+            ActionResult.CONSUME
         }
     }
 
@@ -79,7 +79,8 @@ class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlo
             }
         }
     }
-
+    
+    @Suppress("DEPRECATION")
     override fun onStateReplaced(state: BlockState?, world: World?, pos: BlockPos?, newState: BlockState?, moved: Boolean) {
         if (state?.block != newState?.block) {
             val blockEntity = world?.getBlockEntity(pos)
@@ -96,15 +97,16 @@ class SelfGoverningCatalystBlock(blockSettings: FabricBlockSettings) : FacingBlo
         world: World?,
         state: BlockState?,
         type: BlockEntityType<T>?
-    ): BlockEntityTicker<T> {
-        return BlockEntityTicker<T> { world, pos, state, blockEntity ->
-            if (blockEntity is SelfGoverningCatalystBlockEntity) {
-                world?.isClient?.let { client ->
-                    if (!client) {
-                        blockEntity.serverTick(world, pos, state, blockEntity)
-                    }
+    ): BlockEntityTicker<T>? {
+        if (type == SELF_GOVERNING_CATALYST_BLOCK_ENTITY) {
+            if (world?.isClient == false) {
+                return BlockEntityTicker<T> { tickWorld, _, tickingBlockWorld, tickingBlockEntity ->
+                    tickingBlockEntity as SelfGoverningCatalystBlockEntity
+                    SelfGoverningCatalystBlockEntity.serverTick(tickWorld, tickingBlockWorld, tickingBlockEntity)
                 }
             }
         }
+        
+        return null
     }
 }

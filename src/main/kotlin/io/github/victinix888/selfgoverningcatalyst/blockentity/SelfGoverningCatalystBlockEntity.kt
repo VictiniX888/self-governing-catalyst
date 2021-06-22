@@ -10,7 +10,6 @@ import io.github.victinix888.selfgoverningcatalyst.screen.SelfGoverningCatalystS
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory
 import net.minecraft.block.BlockState
 import net.minecraft.block.FacingBlock
-import net.minecraft.block.entity.BlockEntity
 import net.minecraft.block.entity.LootableContainerBlockEntity
 import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.player.PlayerInventory
@@ -22,7 +21,6 @@ import net.minecraft.network.PacketByteBuf
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket
 import net.minecraft.screen.ScreenHandler
 import net.minecraft.server.network.ServerPlayerEntity
-import net.minecraft.server.network.ServerPlayerInteractionManager
 import net.minecraft.server.world.ServerWorld
 import net.minecraft.text.Text
 import net.minecraft.text.TranslatableText
@@ -35,7 +33,6 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Box
 import net.minecraft.util.math.Direction
 import net.minecraft.util.math.Vec3d
-import net.minecraft.world.GameMode
 import net.minecraft.world.World
 import java.util.*
 
@@ -46,7 +43,6 @@ class SelfGoverningCatalystBlockEntity(pos: BlockPos?, state: BlockState?) : Loo
 
     private val uuid = UUID.fromString("8e08e7ee-fb54-4aa2-9019-0ab8b7e6d4a9")
     private lateinit var fakePlayer: FakePlayerEntity
-    private lateinit var fakePlayerInteractionManager: ServerPlayerInteractionManager
     private var inventory = initInventory
 
     var mode = DEFAULT_MODE
@@ -64,153 +60,158 @@ class SelfGoverningCatalystBlockEntity(pos: BlockPos?, state: BlockState?) : Loo
         private val DEFAULT_MODE =  ClickMode.RIGHT_CLICK
         private val DEFAULT_AIM = AimDirection.STRAIGHT
         private val DEFAULT_REDSTONE = RedstoneMode.IGNORE
-    }
 
-    fun serverTick(world: World?, pos: BlockPos?, state: BlockState?, blockEntity: BlockEntity?) {
-        if (!this::fakePlayer.isInitialized || !this::fakePlayerInteractionManager.isInitialized) {
-            val direction = world?.getBlockState(pos)?.get(FacingBlock.FACING) ?: DEFAULT_DIRECTION
-            fakePlayer = FakePlayerEntity(
-                world?.server,
-                world as ServerWorld,
-                GameProfile(uuid, "[SGC]"),
-                initInventory,
-                calcFakePlayerPos(direction),
-                direction,
-                aimDirection
-            )
-            inventory = fakePlayer.inventory.main
-            fakePlayerInteractionManager = ServerPlayerInteractionManager(fakePlayer)
-            fakePlayerInteractionManager.changeGameMode(GameMode.SURVIVAL)
-        } else {
+        // I put these in the companion object because they are static functions as implemented in the Minecraft code
+        fun serverTick(world: World, state: BlockState, blockEntity: SelfGoverningCatalystBlockEntity) {
+            if (!blockEntity::fakePlayer.isInitialized) {
+                blockEntity.initFakePlayer(world, state)
+            }
+                
             // determine whether the block is receiving a redstone signal
-            val isTriggered by lazy { world?.getBlockState(pos)?.get(SelfGoverningCatalystBlock.TRIGGERED) ?: false }
+            val isTriggered by lazy { state.get(SelfGoverningCatalystBlock.TRIGGERED) ?: false }
             // determine whether the fakeplayer should act on current tick
-            val shouldAct = (redstoneMode == RedstoneMode.IGNORE) || (redstoneMode == RedstoneMode.LOW && !isTriggered) || (redstoneMode == RedstoneMode.HIGH && isTriggered)
+            val shouldAct = (blockEntity.redstoneMode == RedstoneMode.IGNORE) || (blockEntity.redstoneMode == RedstoneMode.LOW && !isTriggered) || (blockEntity.redstoneMode == RedstoneMode.HIGH && isTriggered)
             if (shouldAct) {
-                handleAct()
-            } else if (fakePlayer.isMining) {
+                handleAct(blockEntity.fakePlayer, world, blockEntity)
+            } else if (blockEntity.fakePlayer.isMining) {
                 // cancel mining action if fakeplayer was mining
-                fakePlayer.interruptMining()
+                blockEntity.fakePlayer.interruptMining()
             }
         }
-    }
-    
-    private fun handleAct() {
-        val itemToUse = getItemToUse()
-        // give fakePlayer item from container
-        fakePlayer.setStackInHand(Hand.MAIN_HAND, itemToUse)
-        fakePlayer.playerTick()
 
-        val lookingAtHitResult = getEntityLookingAt(fakePlayer)
-        
-        performAction(itemToUse, lookingAtHitResult)
-        
-        // eject any items that do not fit in the block's inventory
-        fakePlayer.ejectItemsAfter(INVENTORY_SIZE)
-    }
+        private fun handleAct(fakePlayer: FakePlayerEntity, world: World, blockEntity: SelfGoverningCatalystBlockEntity) {
+            val itemToUse = getItemToUse(blockEntity.inventory, blockEntity)
+            // give fakePlayer item from container
+            fakePlayer.setStackInHand(Hand.MAIN_HAND, itemToUse)
+            fakePlayer.playerTick()
 
-    private fun performAction(itemToUse: ItemStack, lookingAtHitResult: HitResult) {
-        if (mode == ClickMode.RIGHT_CLICK) {
-            // cancel mining action if fakePlayer was mining on previous tick
-            if (fakePlayer.isMining) {
-                fakePlayer.interruptMining()
-            }
+            val lookingAtHitResult = getEntityLookingAt(fakePlayer, world)
 
-            if (lookingAtHitResult.type == HitResult.Type.ENTITY) {
-                lookingAtHitResult as EntityHitResult
-                //obtain entity that the fakeplayer is looking at
-                val lookingAtEntity = lookingAtHitResult.entity
+            performAction(itemToUse, lookingAtHitResult, fakePlayer, world, blockEntity.mode)
 
-                if (lookingAtEntity is LivingEntity) {
-                    if (!itemToUse.isEmpty) {
-                        // try to use item on entity
-                        itemToUse.useOnEntity(fakePlayer, lookingAtEntity, Hand.MAIN_HAND).let { result ->
-                            if (result.isAccepted) return
-                        }
-                    }
-                }
+            // eject any items that do not fit in the block's inventory
+            fakePlayer.ejectItemsAfter(INVENTORY_SIZE)
+        }
 
-                // try to interact with entity
-                lookingAtEntity.interact(fakePlayer, Hand.MAIN_HAND).let { result ->
-                    if (result.isAccepted) return
-                }
-                lookingAtEntity.interactAt(fakePlayer, lookingAtHitResult.pos, Hand.MAIN_HAND).let { result ->
-                    if (result.isAccepted) return
-                }
-
-            } else if (lookingAtHitResult.type == HitResult.Type.BLOCK) {
-                lookingAtHitResult as BlockHitResult
-                // obtain block that the fakeplayer is looking at
-                val lookingAtBlockState = world?.getBlockState(lookingAtHitResult.blockPos)
-
-                if (lookingAtBlockState?.isAir == false) {
-                    if (!itemToUse.isEmpty) {
-                        // try to use item on block it is looking at
-                        itemToUse.useOnBlock(ItemUsageContext(fakePlayer, Hand.MAIN_HAND, lookingAtHitResult)).let { result ->
-                            if (result.isAccepted) return
-                        }
-                    }
-
-                    // try to use block normally
-                    lookingAtBlockState.onUse(world, fakePlayer, Hand.MAIN_HAND, lookingAtHitResult).let { result ->
-                        if (result.isAccepted) return
-                    }
+        private fun getItemToUse(inventory: DefaultedList<ItemStack>, blockEntity: SelfGoverningCatalystBlockEntity): ItemStack {
+            if (inventory[blockEntity.currentActiveSlot].isEmpty) {
+                (inventory.indexOfFirst { !it.isEmpty }).let {
+                    blockEntity.currentActiveSlot = if (it >= 0) it else 0
                 }
             }
 
-            if (!itemToUse.isEmpty) {
-                // try to use item normally
-                itemToUse.use(world, fakePlayer, Hand.MAIN_HAND).let { typedResult ->
-                    if (typedResult.result.isAccepted) {
-                        fakePlayer.setStackInHand(Hand.MAIN_HAND, typedResult.value)
-                        return
-                    }
-                }
-            }
-        } else {
-            if (lookingAtHitResult.type == HitResult.Type.ENTITY) {
+            return inventory[blockEntity.currentActiveSlot]
+        }
+
+        private fun getEntityLookingAt(entity: LivingEntity, world: World): HitResult {
+            val entityPos = entity.pos.add(0.0, entity.standingEyeHeight.toDouble(), 0.0)
+            val blockHitResult = entity.raycast(3.0, 1.0F, true)
+
+            return world.getOtherEntities(null, Box(entityPos, blockHitResult.pos))
+                .minByOrNull { it.pos.distanceTo(entityPos) }
+                ?.let {
+                    EntityHitResult(it)
+                } ?: blockHitResult
+        }
+
+        private fun performAction(itemToUse: ItemStack, lookingAtHitResult: HitResult, fakePlayer: FakePlayerEntity, world: World, mode: ClickMode) {
+            if (mode == ClickMode.RIGHT_CLICK) {
                 // cancel mining action if fakePlayer was mining on previous tick
                 if (fakePlayer.isMining) {
                     fakePlayer.interruptMining()
                 }
 
-                lookingAtHitResult as EntityHitResult
-                //obtain entity that the fakeplayer is looking at
-                val lookingAtEntity = lookingAtHitResult.entity
+                if (lookingAtHitResult.type == HitResult.Type.ENTITY) {
+                    lookingAtHitResult as EntityHitResult
+                    //obtain entity that the fakeplayer is looking at
+                    val lookingAtEntity = lookingAtHitResult.entity
 
-                fakePlayer.attack(lookingAtEntity)
-            } else if (lookingAtHitResult.type == HitResult.Type.BLOCK) {
-                lookingAtHitResult as BlockHitResult
-                // obtain block that the fakeplayer is looking at
-                val lookingAtBlockState = world?.getBlockState(lookingAtHitResult.blockPos)
+                    if (lookingAtEntity is LivingEntity) {
+                        if (!itemToUse.isEmpty) {
+                            // try to use item on entity
+                            itemToUse.useOnEntity(fakePlayer, lookingAtEntity, Hand.MAIN_HAND).let { result ->
+                                if (result.isAccepted) return
+                            }
+                        }
+                    }
 
-                // carry out mining action
-                if (lookingAtBlockState?.isAir == false) {
-                    fakePlayer.tickMining(lookingAtBlockState, lookingAtHitResult.blockPos)
+                    // try to interact with entity
+                    lookingAtEntity.interact(fakePlayer, Hand.MAIN_HAND).let { result ->
+                        if (result.isAccepted) return
+                    }
+                    lookingAtEntity.interactAt(fakePlayer, lookingAtHitResult.pos, Hand.MAIN_HAND).let { result ->
+                        if (result.isAccepted) return
+                    }
+
+                } else if (lookingAtHitResult.type == HitResult.Type.BLOCK) {
+                    lookingAtHitResult as BlockHitResult
+                    // obtain block that the fakeplayer is looking at
+                    val lookingAtBlockState = world.getBlockState(lookingAtHitResult.blockPos)
+
+                    if (lookingAtBlockState?.isAir == false) {
+                        if (!itemToUse.isEmpty) {
+                            // try to use item on block it is looking at
+                            itemToUse.useOnBlock(ItemUsageContext(fakePlayer, Hand.MAIN_HAND, lookingAtHitResult)).let { result ->
+                                if (result.isAccepted) return
+                            }
+                        }
+
+                        // try to use block normally
+                        lookingAtBlockState.onUse(world, fakePlayer, Hand.MAIN_HAND, lookingAtHitResult).let { result ->
+                            if (result.isAccepted) return
+                        }
+                    }
+                }
+
+                if (!itemToUse.isEmpty) {
+                    // try to use item normally
+                    itemToUse.use(world, fakePlayer, Hand.MAIN_HAND).let { typedResult ->
+                        if (typedResult.result.isAccepted) {
+                            fakePlayer.setStackInHand(Hand.MAIN_HAND, typedResult.value)
+                            return
+                        }
+                    }
+                }
+            } else {
+                if (lookingAtHitResult.type == HitResult.Type.ENTITY) {
+                    // cancel mining action if fakePlayer was mining on previous tick
+                    if (fakePlayer.isMining) {
+                        fakePlayer.interruptMining()
+                    }
+
+                    lookingAtHitResult as EntityHitResult
+                    //obtain entity that the fakeplayer is looking at
+                    val lookingAtEntity = lookingAtHitResult.entity
+
+                    fakePlayer.attack(lookingAtEntity)
+                } else if (lookingAtHitResult.type == HitResult.Type.BLOCK) {
+                    lookingAtHitResult as BlockHitResult
+                    // obtain block that the fakeplayer is looking at
+                    val lookingAtBlockState = world.getBlockState(lookingAtHitResult.blockPos)
+
+                    // carry out mining action
+                    if (lookingAtBlockState?.isAir == false) {
+                        fakePlayer.tickMining(lookingAtBlockState, lookingAtHitResult.blockPos)
+                    }
                 }
             }
         }
     }
-
-    private fun getItemToUse(): ItemStack {
-        if (inventory[currentActiveSlot].isEmpty) {
-            (inventory.indexOfFirst { !it.isEmpty }).let {
-                currentActiveSlot = if (it >= 0) it else 0
-            }
-        }
-
-        return inventory[currentActiveSlot]
-    }
-
-    private fun getEntityLookingAt(entity: LivingEntity): HitResult {
-        val entityPos = entity.pos.add(0.0, entity.standingEyeHeight.toDouble(), 0.0)
-        val blockHitResult = entity.raycast(3.0, 1.0F, true)
-
-        return world?.getOtherEntities(null, Box(entityPos, blockHitResult.pos))
-            ?.minByOrNull { it.pos.distanceTo(entityPos) }
-            ?.let {
-            EntityHitResult(it)
-        } ?: blockHitResult
+    
+    // Initializes the fakeplayer. Should be called on or before the first tick.
+    // this.world is null in the init block so this must be done after construction
+    private fun initFakePlayer(world: World, state: BlockState) {
+        val direction = state.get(FacingBlock.FACING) ?: DEFAULT_DIRECTION
+        fakePlayer = FakePlayerEntity(
+            world.server,
+            world as ServerWorld,
+            GameProfile(uuid, "[SGC]"),
+            initInventory,
+            calcFakePlayerPos(direction),
+            direction,
+            aimDirection
+        )
+        inventory = fakePlayer.inventory.main
     }
 
     private fun calcFakePlayerPos(direction: Direction): Vec3d {

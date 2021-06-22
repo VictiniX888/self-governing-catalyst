@@ -9,7 +9,6 @@ import net.minecraft.network.NetworkSide
 import net.minecraft.screen.NamedScreenHandlerFactory
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.network.ServerPlayerEntity
-import net.minecraft.server.network.ServerPlayerInteractionManager
 import net.minecraft.server.world.ServerWorld
 import net.minecraft.sound.SoundCategory
 import net.minecraft.sound.SoundEvent
@@ -44,6 +43,7 @@ class FakePlayerEntity(
             Direction.DOWN -> setRotation(direction.asRotation(), 90F)
         }
         networkHandler = FakeNetworkHandler(world?.server, ClientConnection(NetworkSide.SERVERBOUND), this)
+        interactionManager.changeGameMode(GameMode.SURVIVAL)
 
         // Initialize inventory
         initInventory.forEachIndexed { i, stack -> if (i < inventory.main.size) inventory.main[i] = stack }

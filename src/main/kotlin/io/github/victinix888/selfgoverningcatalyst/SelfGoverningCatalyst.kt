@@ -9,7 +9,7 @@ import io.github.victinix888.selfgoverningcatalyst.screen.SelfGoverningCatalystS
 import io.github.victinix888.selfgoverningcatalyst.screen.SelfGoverningCatalystScreenHandler
 import net.fabricmc.fabric.api.`object`.builder.v1.block.FabricBlockSettings
 import net.fabricmc.fabric.api.client.screenhandler.v1.ScreenRegistry
-import net.fabricmc.fabric.api.network.ServerSidePacketRegistry
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.fabricmc.fabric.api.screenhandler.v1.ScreenHandlerRegistry
 import net.minecraft.block.Material
 import net.minecraft.block.entity.BlockEntityType
@@ -43,13 +43,13 @@ fun init() {
                 SelfGoverningCatalystScreenHandler(syncId, inventory, buf.readBlockPos(), ClickMode.values()[buf.readInt()], AimDirection.values()[buf.readInt()], RedstoneMode.values()[buf.readInt()])
             }
 
-    ServerSidePacketRegistry.INSTANCE.register(Identifier(MODID, "mode_button_click_packet")) { packetContext, packetByteBuf ->
-        val blockPos = packetByteBuf.readBlockPos()
-        val clickMode = ClickMode.values()[packetByteBuf.readInt()]
+    ServerPlayNetworking.registerGlobalReceiver(Identifier(MODID, "mode_button_click_packet")) { server, player, _, buf, _ ->
+        val blockPos = buf.readBlockPos()
+        val clickMode = ClickMode.values()[buf.readInt()]
 
-        packetContext.taskQueue.execute {
-            if (packetContext.player.world.canSetBlock(blockPos)) {
-                val blockEntity = packetContext.player.world.getBlockEntity(blockPos) as? SelfGoverningCatalystBlockEntity
+        server.execute {
+            if (player.world.canSetBlock(blockPos)) {
+                val blockEntity = player.world.getBlockEntity(blockPos) as? SelfGoverningCatalystBlockEntity
                 if (blockEntity != null) {
                     blockEntity.mode = clickMode
                 }
@@ -57,13 +57,13 @@ fun init() {
         }
     }
 
-    ServerSidePacketRegistry.INSTANCE.register(Identifier(MODID, "aim_button_click_packet")) { packetContext, packetByteBuf ->
-        val blockPos = packetByteBuf.readBlockPos()
-        val aimDirection = AimDirection.values()[packetByteBuf.readInt()]
+    ServerPlayNetworking.registerGlobalReceiver(Identifier(MODID, "aim_button_click_packet")) { server, player, _, buf, _ ->
+        val blockPos = buf.readBlockPos()
+        val aimDirection = AimDirection.values()[buf.readInt()]
 
-        packetContext.taskQueue.execute {
-            if (packetContext.player.world.canSetBlock(blockPos)) {
-                val blockEntity = packetContext.player.world.getBlockEntity(blockPos) as? SelfGoverningCatalystBlockEntity
+        server.execute {
+            if (player.world.canSetBlock(blockPos)) {
+                val blockEntity = player.world.getBlockEntity(blockPos) as? SelfGoverningCatalystBlockEntity
                 if (blockEntity != null) {
                     blockEntity.aimDirection = aimDirection
                 }
@@ -71,13 +71,13 @@ fun init() {
         }
     }
 
-    ServerSidePacketRegistry.INSTANCE.register(Identifier(MODID, "redstone_button_click_packet")) { packetContext, packetByteBuf ->
-        val blockPos = packetByteBuf.readBlockPos()
-        val redstoneMode = RedstoneMode.values()[packetByteBuf.readInt()]
+    ServerPlayNetworking.registerGlobalReceiver(Identifier(MODID, "redstone_button_click_packet")) { server, player, _, buf, _ ->
+        val blockPos = buf.readBlockPos()
+        val redstoneMode = RedstoneMode.values()[buf.readInt()]
 
-        packetContext.taskQueue.execute {
-            if (packetContext.player.world.canSetBlock(blockPos)) {
-                val blockEntity = packetContext.player.world.getBlockEntity(blockPos) as? SelfGoverningCatalystBlockEntity
+        server.execute {
+            if (player.world.canSetBlock(blockPos)) {
+                val blockEntity = player.world.getBlockEntity(blockPos) as? SelfGoverningCatalystBlockEntity
                 if (blockEntity != null) {
                     blockEntity.redstoneMode = redstoneMode
                 }

@@ -57,7 +57,7 @@ class SelfGoverningCatalystScreenHandler(
     override fun transferSlot(player: PlayerEntity?, index: Int): ItemStack {
         var newStack = ItemStack.EMPTY
         val slot = slots[index]
-        if (slot != null && slot.hasStack()) {
+        if (slot.hasStack()) {
             val originalStack = slot.stack
             newStack = originalStack.copy()
             if (index < INVENTORY_SIZE) {

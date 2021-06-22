@@ -6,8 +6,7 @@ import io.github.victinix888.selfgoverningcatalyst.blockentity.ClickMode
 import io.github.victinix888.selfgoverningcatalyst.blockentity.RedstoneMode
 import io.github.victinix888.selfgoverningcatalyst.entity.AimDirection
 import io.netty.buffer.Unpooled
-import net.fabricmc.fabric.api.network.ClientSidePacketRegistry
-import net.minecraft.client.gui.screen.ingame.CraftingScreen
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
 import net.minecraft.client.gui.screen.ingame.HandledScreen
 import net.minecraft.client.gui.widget.ButtonWidget
 import net.minecraft.client.render.GameRenderer
@@ -62,10 +61,7 @@ class SelfGoverningCatalystScreen(
                 passedData.writeBlockPos(blockEntity.pos)
                 passedData.writeInt(mode.ordinal)
 
-                ClientSidePacketRegistry.INSTANCE.sendToServer(
-                    Identifier(MODID, "mode_button_click_packet"),
-                    passedData
-                )
+                ClientPlayNetworking.send(Identifier(MODID, "mode_button_click_packet"), passedData)
 
                 button.message = clickModeButtonText
             }
@@ -80,7 +76,7 @@ class SelfGoverningCatalystScreen(
                 passedData.writeBlockPos(blockEntity.pos)
                 passedData.writeInt(aimDirection.ordinal)
 
-                ClientSidePacketRegistry.INSTANCE.sendToServer(Identifier(MODID, "aim_button_click_packet"), passedData)
+                ClientPlayNetworking.send(Identifier(MODID, "aim_button_click_packet"), passedData)
 
                 button.message = aimDirectionButtonText
             }
@@ -95,10 +91,7 @@ class SelfGoverningCatalystScreen(
                 passedData.writeBlockPos(blockEntity.pos)
                 passedData.writeInt(redstoneMode.ordinal)
 
-                ClientSidePacketRegistry.INSTANCE.sendToServer(
-                    Identifier(MODID, "redstone_button_click_packet"),
-                    passedData
-                )
+                ClientPlayNetworking.send(Identifier(MODID, "redstone_button_click_packet"), passedData)
 
                 button.message = redstoneModeButtonText
             }
